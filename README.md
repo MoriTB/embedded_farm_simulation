@@ -19,4 +19,7 @@ Task 5: Adding weight (automatically) In this task, it tries to add a specified 
 
 Task 6: Reducing weight (automatically) In this task, it tries to reduce a specified weight (100 grams) based on access to the global weight (shared resource) when the weight is more than 90 grams. A semaphore is also implemented here to avoid processing problems. (In fact, animals feed on food in a periodic process and it is also tried to be implemented as a task here).
 
+# proteus design:
+<img width="811" alt="Screen Shot 2023-07-22 at 7 08 41 PM" src="https://github.com/MoriTB/embedded_farm_simulation/assets/58389717/a0402405-448d-4759-8825-37d897763266">
+
 In this system, it has been tried to be implemented based on RM and is shaped based on the periodic algorithm scheduling and even to the possibility that if a task is added or for reasons uryodhad or even two tasks with the same period, or even aperiodic tasks and their implementation with the rest of the tasks has been prioritized.
