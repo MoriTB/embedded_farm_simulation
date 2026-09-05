@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FarmRT is a browser-based digital twin for an Arduino Mega and FreeRTOS livestock feeder.">
+  <meta name="theme-color" content="#171a18">
+  <title>FarmRT — Smart Feeder Digital Twin</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#workspace" aria-label="FarmRT home">
+      <span class="brand-mark" aria-hidden="true">FR</span>
+      <span>FarmRT</span>
+    </a>
+    <div class="topbar-meta">
+      <span>Arduino Mega</span>
+      <span>FreeRTOS</span>
+      <a href="https://github.com/MoriTB/embedded_farm_simulation" target="_blank" rel="noreferrer">Source ↗</a>
+    </div>
+  </header>
+
+  <main id="workspace" class="shell">
+    <section class="workspace-heading" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">Smart feeder digital twin</p>
+        <h1 id="page-title">One farm day, modeled minute by minute.</h1>
+      </div>
+      <p class="workspace-note">Farm time uses a 24-hour feeding model. The task trace retains the periods defined in the original firmware.</p>
+    </section>
+
+    <section class="control-strip" aria-label="Simulation controls">
+      <label>
+        <span>Control policy</span>
+        <select id="policy">
+          <option value="adaptive">Adaptive threshold</option>
+          <option value="fixed">Fixed schedule baseline</option>
+        </select>
+      </label>
+      <label>
+        <span>Flock size</span>
+        <div class="range-line">
+          <input id="flock-size" type="range" min="12" max="48" value="24" step="6">
+          <output id="flock-output" for="flock-size">24 ewes</output>
+        </div>
+      </label>
+      <label>
+        <span>Playback</span>
+        <select id="playback">
+          <option value="720">2 minute day</option>
+          <option value="1440" selected>1 minute day</option>
+          <option value="2880">30 second day</option>
+        </select>
+      </label>
+      <div class="button-group">
+        <button id="run" class="button button-primary" type="button">Run day</button>
+        <button id="reset" class="button" type="button">Reset</button>
+      </div>
+    </section>
+
+    <section class="metric-grid" aria-live="polite" aria-label="Live performance metrics">
+      <article class="metric">
+        <span class="metric-label">Trough mass</span>
+        <strong id="mass-value">18.0 kg</strong>
+        <span id="mass-detail">45% of capacity</span>
+      </article>
+      <article class="metric">
+        <span class="metric-label">Demand served</span>
+        <strong id="coverage-value">100.0%</strong>
+        <span id="coverage-detail">0.0 / 0.0 kg</span>
+      </article>
+      <article class="metric">
+        <span class="metric-label">Time in operating band</span>
+        <strong id="band-value">100.0%</strong>
+        <span>At or above the 12 kg threshold</span>
+      </article>
+      <article class="metric metric-clock">
+        <span class="metric-label">Farm clock</span>
+        <strong id="clock-value">00:00</strong>
+        <span id="clock-detail">Day 01 · paused</span>
+      </article>
+    </section>
+
+    <section class="primary-grid">
+      <article class="panel chart-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Operational view</p>
+            <h2>Trough inventory</h2>
+          </div>
+          <div class="chart-legend" aria-label="Chart reference lines">
+            <span><i class="legend-line legend-target"></i>Target 32 kg</span>
+            <span><i class="legend-line legend-threshold"></i>Refill 12 kg</span>
+          </div>
+        </div>
+        <svg id="weight-chart" class="weight-chart" viewBox="0 0 800 310" role="img" aria-labelledby="chart-title chart-desc">
+          <title id="chart-title">Trough weight across a 24-hour farm day</title>
+          <desc id="chart-desc">The line shows simulated feed mass, with reference lines at the refill threshold and target level.</desc>
+          <g id="chart-grid"></g>
+          <path id="chart-area" class="chart-area" d=""></path>
+          <path id="chart-line" class="chart-line" d=""></path>
+          <line id="threshold-line" class="reference-line threshold-line"></line>
+          <line id="target-line" class="reference-line target-line"></line>
+          <circle id="chart-marker" class="chart-marker" cx="0" cy="0" r="5"></circle>
+          <g id="chart-axis-labels"></g>
+        </svg>
+        <div class="day-progress" id="day-progress" role="progressbar" aria-label="Farm day progress" aria-valuemin="0" aria-valuemax="1440" aria-valuenow="0">
+          <span id="day-progress-fill"></span>
+        </div>
+      </article>
+
+      <aside class="panel live-panel" aria-labelledby="system-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Physical system</p>
+            <h2 id="system-title">Feed path</h2>
+          </div>
+          <span id="system-state" class="state-tag">Monitoring</span>
+        </div>
+
+        <div class="system-map" aria-label="Feed moves from hopper through auger into the weighed trough and animal pen">
+          <div class="system-node">
+            <span class="node-index">01</span>
+            <strong>Hopper</strong>
+            <span>180 kg reserve</span>
+          </div>
+          <span class="system-link" aria-hidden="true"></span>
+          <div class="system-node">
+            <span class="node-index">02</span>
+            <strong>Auger</strong>
+            <span>4 kg/min</span>
+          </div>
+          <span class="system-link" aria-hidden="true"></span>
+          <div class="system-node active-node">
+            <span class="node-index">03</span>
+            <strong>Weigh trough</strong>
+            <span>HX711 load cell</span>
+          </div>
+          <span class="system-link" aria-hidden="true"></span>
+          <div class="system-node">
+            <span class="node-index">04</span>
+            <strong>Pen</strong>
+            <span id="pen-count">24 ewes</span>
+          </div>
+        </div>
+
+        <div class="level-block">
+          <div class="level-labels">
+            <span>Current level</span>
+            <strong id="level-label">18.0 / 40 kg</strong>
+          </div>
+          <div class="level-track" id="level-track" role="progressbar" aria-label="Trough level" aria-valuemin="0" aria-valuemax="40" aria-valuenow="18">
+            <span class="level-threshold" aria-hidden="true"></span>
+            <span id="level-fill" class="level-fill"></span>
+          </div>
+          <div class="level-scale"><span>0</span><span>12 kg refill</span><span>40 kg</span></div>
+        </div>
+
+        <div class="event-block">
+          <span class="metric-label">Latest controller event</span>
+          <p id="event-text" aria-live="polite">Load cell initialized at 18.0 kg.</p>
+          <time id="event-time">00:00</time>
+        </div>
+      </aside>
+    </section>
+
+    <section class="secondary-grid">
+      <article class="panel scheduler-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Embedded timing</p>
+            <h2>Original FreeRTOS cadence</h2>
+          </div>
+          <span class="panel-note">Live release phase</span>
+        </div>
+        <div id="task-list" class="task-list" aria-label="FreeRTOS task period progress"></div>
+        <p class="disclosure">These bars show configured release periods—not measured execution time. WCET and deadline instrumentation belong in the next firmware revision.</p>
+      </article>
+
+      <article class="panel comparison-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Full-day projection</p>
+            <h2>Control-policy comparison</h2>
+          </div>
+          <span class="panel-note">Same flock and demand</span>
+        </div>
+        <div id="comparison-list" class="comparison-list"></div>
+      </article>
+    </section>
+
+    <section class="model-section" aria-labelledby="model-title">
+      <div>
+        <p class="eyebrow">Model definition</p>
+        <h2 id="model-title">Assumptions are visible and editable in code.</h2>
+      </div>
+      <dl class="model-grid">
+        <div><dt>Average body mass</dt><dd>60 kg</dd></div>
+        <div><dt>Daily dry-matter intake</dt><dd>2.0% body mass</dd></div>
+        <div><dt>Trough capacity</dt><dd>40 kg</dd></div>
+        <div><dt>Adaptive control</dt><dd>12 → 32 kg</dd></div>
+      </dl>
+      <p class="model-note">The intake assumption is a scenario parameter informed by published sheep nutrition tables; it is not veterinary or ration-planning advice. Consumption is distributed across two daily feeding peaks. <a href="https://extension.oregonstate.edu/catalog/nutrient-requirements-sheep" target="_blank" rel="noreferrer">Reference: Oregon State University Extension ↗</a></p>
+    </section>
+  </main>
+
+  <footer>
+    <span>FarmRT · Embedded systems + digital-twin demonstration</span>
+    <span>Original project by Morteza Tavakkoli</span>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
